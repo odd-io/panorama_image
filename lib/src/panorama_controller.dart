@@ -49,6 +49,7 @@ class PanoramaController extends ChangeNotifier {
     double? longitude,
     double? latitude,
     double? fov,
+    void Function(ViewChangeDetails)? onViewChanged,
   }) {
     bool changed = false;
 
@@ -69,6 +70,7 @@ class PanoramaController extends ChangeNotifier {
 
     if (changed) {
       notifyListeners();
+      onViewChanged?.call(viewDetails);
     }
   }
 

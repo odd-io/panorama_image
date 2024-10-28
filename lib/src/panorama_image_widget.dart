@@ -125,10 +125,16 @@ class _PanoramaViewerState extends State<PanoramaViewer> {
     }
 
     return Listener(
-      onPointerSignal: _gestureController.handlePointerSignal,
+      onPointerSignal: (event) => _gestureController.handlePointerSignal(
+        event,
+        onViewChanged: widget.onViewChanged,
+      ),
       child: GestureDetector(
         onScaleStart: _gestureController.handleScaleStart,
-        onScaleUpdate: _gestureController.handleScaleUpdate,
+        onScaleUpdate: (details) => _gestureController.handleScaleUpdate(
+          details,
+          onViewChanged: widget.onViewChanged,
+        ),
         onScaleEnd: _gestureController.handleScaleEnd,
         child: CustomPaint(
           painter: PanoramaPainter(

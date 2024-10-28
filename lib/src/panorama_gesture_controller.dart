@@ -4,9 +4,15 @@ import 'view_change_details.dart';
 
 /// Abstract base class for panorama gesture control
 abstract class PanoramaGestureController {
-  void handlePointerSignal(PointerSignalEvent event);
+  void handlePointerSignal(
+    PointerSignalEvent event, {
+    void Function(ViewChangeDetails)? onViewChanged,
+  });
   void handleScaleStart(ScaleStartDetails details);
-  void handleScaleUpdate(ScaleUpdateDetails details);
+  void handleScaleUpdate(
+    ScaleUpdateDetails details, {
+    void Function(ViewChangeDetails)? onViewChanged,
+  });
   void handleScaleEnd(ScaleEndDetails details);
 }
 
@@ -26,20 +32,28 @@ class DefaultPanoramaGestureController implements PanoramaGestureController {
   static const double _touchZoomSensitivity = 0.015;
 
   @override
-  void handlePointerSignal(PointerSignalEvent event) {
+  void handlePointerSignal(
+    PointerSignalEvent event, {
+    void Function(ViewChangeDetails)? onViewChanged,
+  }) {
     if (event is PointerScrollEvent) {
       final double scaleFactor = event.scrollDelta.dy > 0
           ? (1 + _mouseWheelZoomSensitivity)
           : (1 - _mouseWheelZoomSensitivity);
 
       final double newFOV = controller.fov * scaleFactor;
-      controller.updateView(fov: newFOV);
-      onViewChanged?.call(controller.viewDetails);
+      controller.updateView(
+        fov: newFOV,
+        onViewChanged: onViewChanged ?? this.onViewChanged,
+      );
     }
   }
 
   @override
-  void handleScaleUpdate(ScaleUpdateDetails details) {
+  void handleScaleUpdate(
+    ScaleUpdateDetails details, {
+    void Function(ViewChangeDetails)? onViewChanged,
+  }) {
     // Handle panning
     if (_lastFocalPoint != null) {
       final double dx = details.focalPoint.dx - _lastFocalPoint!.dx;
