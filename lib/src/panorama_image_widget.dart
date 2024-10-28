@@ -1,5 +1,5 @@
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'panorama_gesture_controller.dart';
 import 'view_change_details.dart';
 import 'panorama_controller.dart';
 import 'panorama_painter.dart';
@@ -42,6 +42,7 @@ class PanoramaViewer extends StatefulWidget {
     this.onViewChanged,
     this.onError,
     this.controller,
+    this.gestureController,
   });
 
   /// Notifies when the view parameters (longitude, latitude, or FOV) change.
@@ -52,6 +53,9 @@ class PanoramaViewer extends StatefulWidget {
 
   /// Optional controller for programmatically controlling the panorama view.
   final PanoramaController? controller;
+
+  /// Optional custom gesture controller for custom interaction handling
+  final PanoramaGestureController? gestureController;
 
   /// The equirectangular panoramic image to display.
   final ImageProvider image;
@@ -71,18 +75,10 @@ class PanoramaViewer extends StatefulWidget {
 
 class _PanoramaViewerState extends State<PanoramaViewer> {
   late final PanoramaController _controller;
+  late final PanoramaGestureController _gestureController;
   ImageInfo? _imageInfo;
   // ignore: unused_field
   late ImageStream _imageStream;
-  Offset? _lastFocalPoint;
-
-  @override
-  void dispose() {
-    if (widget.controller == null) {
-      _controller.dispose();
-    }
-    super.dispose();
-  }
 
   @override
   void initState() {
@@ -92,6 +88,11 @@ class _PanoramaViewerState extends State<PanoramaViewer> {
           initialFOV: widget.initialFOV,
           maxFOV: widget.maxFOV,
           minFOV: widget.minFOV,
+        );
+    _gestureController = widget.gestureController ??
+        DefaultPanoramaGestureController(
+          controller: _controller,
+          onViewChanged: widget.onViewChanged,
         );
     _loadImage();
   }
@@ -117,63 +118,6 @@ class _PanoramaViewerState extends State<PanoramaViewer> {
     widget.onError?.call(PanoramaError.loadError);
   }
 
-  void _handlePointerSignal(PointerSignalEvent event) {
-    if (event is PointerScrollEvent) {
-      // Adjust zoom sensitivity for mouse wheel
-      const double zoomSensitivity = 0.05;
-      final double scaleFactor = event.scrollDelta.dy > 0
-          ? (1 + zoomSensitivity)
-          : (1 - zoomSensitivity);
-
-      final double newFOV = _controller.fov * scaleFactor;
-      _controller.updateView(fov: newFOV);
-      widget.onViewChanged?.call(_controller.viewDetails);
-    }
-  }
-
-  void _handleScaleUpdate(ScaleUpdateDetails details) {
-    // Handle panning
-    if (_lastFocalPoint != null) {
-      final double dx = details.focalPoint.dx - _lastFocalPoint!.dx;
-      final double dy = details.focalPoint.dy - _lastFocalPoint!.dy;
-
-      // Adjust sensitivity based on FOV - more zoomed in = slower pan
-      final double sensitivity = 0.1 * (_controller.fov / 90.0);
-
-      // Update longitude (horizontal pan)
-      double newLongitude = _controller.longitude - dx * sensitivity;
-      // Ensure longitude wraps around properly
-      newLongitude = (newLongitude + 360.0) % 360.0;
-
-      // Update latitude (vertical pan) with inverted control
-      double newLatitude = _controller.latitude - dy * sensitivity;
-      // Clamp latitude to prevent over-rotation
-      newLatitude = newLatitude.clamp(-90.0, 90.0);
-
-      _controller.updateView(
-        longitude: newLongitude,
-        latitude: newLatitude,
-      );
-    }
-
-    // Handle zooming
-    if (details.scale != 1.0) {
-      final double newFOV = _controller.fov / details.scale;
-      _controller.updateView(fov: newFOV);
-    }
-
-    _lastFocalPoint = details.focalPoint;
-    widget.onViewChanged?.call(_controller.viewDetails);
-  }
-
-  void _handleScaleStart(ScaleStartDetails details) {
-    _lastFocalPoint = details.focalPoint;
-  }
-
-  void _handleScaleEnd(ScaleEndDetails details) {
-    _lastFocalPoint = null;
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_imageInfo == null) {
@@ -181,11 +125,11 @@ class _PanoramaViewerState extends State<PanoramaViewer> {
     }
 
     return Listener(
-      onPointerSignal: _handlePointerSignal,
+      onPointerSignal: _gestureController.handlePointerSignal,
       child: GestureDetector(
-        onScaleStart: _handleScaleStart,
-        onScaleUpdate: _handleScaleUpdate,
-        onScaleEnd: _handleScaleEnd,
+        onScaleStart: _gestureController.handleScaleStart,
+        onScaleUpdate: _gestureController.handleScaleUpdate,
+        onScaleEnd: _gestureController.handleScaleEnd,
         child: CustomPaint(
           painter: PanoramaPainter(
             image: _imageInfo!.image,
