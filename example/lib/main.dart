@@ -33,7 +33,20 @@ class _PanoramaDemoState extends State<PanoramaDemo> {
   double _latitude = 0.0;
   double _fov = 90.0;
 
-  final _controller = PanoramaController();
+  final _controller = PanoramaController(
+    initialLongitude: 180.0, // Start looking at the opposite direction
+    initialLatitude: 0.0, // Start at horizon level
+    initialFOV: 90.0, // Start with 90° field of view
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    // Initialize the view values from the controller
+    _longitude = _controller.longitude;
+    _latitude = _controller.latitude;
+    _fov = _controller.fov;
+  }
 
   void _updateView(ViewChangeDetails details) {
     setState(() {
