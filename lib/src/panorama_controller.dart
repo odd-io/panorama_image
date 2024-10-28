@@ -22,14 +22,20 @@ class PanoramaController extends ChangeNotifier {
 
   /// Creates a new panorama controller with optional initial values.
   ///
+  /// - [initialLongitude]: Starting horizontal rotation in degrees (default: 0.0)
+  /// - [initialLatitude]: Starting vertical rotation in degrees (default: 0.0)
   /// - [initialFOV]: Starting field of view in degrees (default: 90.0)
   /// - [maxFOV]: Maximum allowed field of view in degrees (default: 120.0)
   /// - [minFOV]: Minimum allowed field of view in degrees (default: 30.0)
   PanoramaController({
+    double initialLongitude = 0.0,
+    double initialLatitude = 0.0,
     double initialFOV = 90.0,
     this.maxFOV = 120.0,
     this.minFOV = 30.0,
-  }) : _fov = initialFOV;
+  })  : _longitude = initialLongitude % 360.0,
+        _latitude = initialLatitude.clamp(-90.0, 90.0),
+        _fov = initialFOV.clamp(minFOV, maxFOV);
 
   /// The current horizontal rotation in degrees (0 to 360)
   double get longitude => _longitude;
